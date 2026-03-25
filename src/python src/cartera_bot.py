@@ -59,7 +59,7 @@ Estimado/a {nombre},
 
 La factura {numero} por valor de {valor} lleva {dias} días vencida sin regularizar.
 
-Solicitamos gestionar el pago de inmediato.
+Solicitamos gestionar el pago de lo antes posible.
 
 Recuerda.. Buscas. clickeas, solucionas.
 
