@@ -8,6 +8,7 @@ Automatizar procesos repetitivos de la empresa como:
 - Envío automático de cotizaciones
 - Chatbot para clientes
 - Automatización de correos
+- Cartera con chat bot reporte
 
 ## Tecnologías
 - Python
