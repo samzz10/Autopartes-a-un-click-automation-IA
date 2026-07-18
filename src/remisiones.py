@@ -18,14 +18,15 @@ from dateutil.relativedelta import relativedelta
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.worksheet.datavalidation import DataValidation
+from dotenv import load_dotenv
+import os
 
-ALEGRA_TOKEN     = "0d9e3617130df4ec9b11"
-ALEGRA_EMAIL     = "autopartesaunclickcol@gmail.com"
-TELEGRAM_TOKEN   = "8619419567:AAGLsxGbKroZHEukxsMeSImDl4d2APfUYvU"
-TELEGRAM_CHAT_ID     = 8492722057
-EMAIL_EMPRESA    = "autopartesaunclickcol@gmail.com"
-PASSWORD_APP     = "vijq vxzb naos ifld"  # Contraseña de aplicación Gmail
-NOMBRE_EMPRESA   = "Autopartes a un Click"
+load_dotenv()
+ALEGRA_TOKEN     = os.getenv("ALEGRA_TOKEN")
+ALEGRA_EMAIL     = os.getenv("ALEGRA_EMAIL")
+TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = int(os.getenv("TELEGRAM_CHAT_ID"))
+NOMBRE_EMPRESA   = os.getenv("NOMBRE_EMPRESA")
 
 def obtener_remisiones_pendientes():
     url = "https://api.alegra.com/api/v1/remissions"
@@ -69,7 +70,7 @@ def obtener_remisiones_pendientes():
             if fecha_rem < fecha_desde or fecha_rem > fecha_hasta:
                 continue
 
-            # Solo remisiones abiertas (open) — excluir closed y void
+            # Solo remisiones abiertas (open)
             if rem.get("status") != "open":
                 continue
 
@@ -135,14 +136,14 @@ def generar_excel(remisiones):
     ws = wb.active
     ws.title = "Remisiones Pendientes"
  
-    # ── Título ────────────────────────────────────────────────
+    # Título
     ws.merge_cells("A1:G1")
     ms("A1", "INFORME DE GESTIÓN — REMISIONES PENDIENTES",
        Font(name="Arial", bold=True, size=14, color=C_WHITE),
        fill(C_NAVY), Alignment(horizontal="center", vertical="center"), bH)
     ws.row_dimensions[1].height = 32
  
-    # ── Subtítulo ─────────────────────────────────────────────
+    #Subtítulo 
     ws.merge_cells("A2:G2")
     ms("A2", f"Generado el {periodo}   |   Estado: Sin Facturar   |   Desde el dia 15 del mes pasado",
        Font(name="Arial", size=10, italic=True, color=C_WHITE),
@@ -150,7 +151,7 @@ def generar_excel(remisiones):
     ws.row_dimensions[2].height = 18
     ws.row_dimensions[3].height = 8
  
-    # ── KPIs ──────────────────────────────────────────────────
+    #KPIs
     kpis = [
         ("A4:B4", "A5:B5", "Remisiones pendientes", str(num_remisiones)),
         ("C4:D4", "C5:D5", "Clientes afectados",    str(num_clientes)),
@@ -171,7 +172,7 @@ def generar_excel(remisiones):
     ws.row_dimensions[5].height = 26
     ws.row_dimensions[6].height = 8
  
-    # ── Encabezados ───────────────────────────────────────────
+    #Encabezados
     headers = ["Cliente", "No. Remisión", "Fecha", "Ítem(s)", "Notas", "Valor Total", "Estado"]
     for col, h in enumerate(headers, 1):
         sc(7, col, h,
@@ -179,7 +180,7 @@ def generar_excel(remisiones):
            fill(C_NAVY), Alignment(horizontal="center", vertical="center", wrap_text=True), b)
     ws.row_dimensions[7].height = 22
  
-    # ── Dropdown Estado ───────────────────────────────────────
+    #Dropdown Estado
     dv = DataValidation(
         type="list",
         formula1='"Ya se envió correo,Por presionar"',
@@ -188,7 +189,7 @@ def generar_excel(remisiones):
     )
     ws.add_data_validation(dv)
  
-    # ── Colores por cliente ───────────────────────────────────
+    #Colores por cliente
     paleta = [
         ("FBEAF0", "993556"), ("E1F5EE", "0F6E56"),
         ("FAEEDA", "854F0B"), ("EAF3FB", "185FA5"),
@@ -198,7 +199,7 @@ def generar_excel(remisiones):
     for idx, cl in enumerate(sorted(set(f["cliente"] for f in filas))):
         cliente_color[cl] = paleta[idx % len(paleta)]
  
-    # ── Filas de datos ────────────────────────────────────────
+    #Filas de datos
     DS = 8
     prev_cliente  = None
     shade_toggle  = False
@@ -262,7 +263,7 @@ def generar_excel(remisiones):
         dv.add(ec)
         ws.row_dimensions[r].height = 38
  
-    # ── Fila Total ────────────────────────────────────────────
+    #Fila Total
     TR = DS + len(filas)
     ws.merge_cells(f"A{TR}:E{TR}")
     ms(f"A{TR}", "TOTAL GENERAL",
@@ -276,7 +277,7 @@ def generar_excel(remisiones):
        Alignment(horizontal="center", vertical="center"), b)
     ws.row_dimensions[TR].height = 22
  
-    # ── Anchos de columna ─────────────────────────────────────
+    # Anchos de columna
     ws.column_dimensions["A"].width = 34
     ws.column_dimensions["B"].width = 13
     ws.column_dimensions["C"].width = 12
