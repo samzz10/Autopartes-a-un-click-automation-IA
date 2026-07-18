@@ -13,14 +13,15 @@ import schedule
 import time
 from remisiones import obtener_remisiones_pendientes, generar_excel
 from conciliacion import get_conciliacion_handler
+from dotenv import load_dotenv
+import os
 
-ALEGRA_TOKEN     = "0d9e3617130df4ec9b11"
-ALEGRA_EMAIL     = "autopartesaunclickcol@gmail.com"
-TELEGRAM_TOKEN   = "8619419567:AAGLsxGbKroZHEukxsMeSImDl4d2APfUYvU"
-CHAT_ID_PAPA     = 8492722057
-EMAIL_EMPRESA    = "autopartesaunclickcol@gmail.com"
-PASSWORD_APP     = "vijq vxzb naos ifld"  # Contraseña de aplicación Gmail
-NOMBRE_EMPRESA   = "Autopartes a un Click"
+load_dotenv()  # Cargar variables de entorno desde .env para mayor seguridad
+ALEGRA_TOKEN     = os.getenv("ALEGRA_TOKEN")
+ALEGRA_EMAIL     = os.getenv("ALEGRA_EMAIL")
+TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID_PAPA     = int(os.getenv("CHAT_ID_PAPA"))
+NOMBRE_EMPRESA   = "Autopartes a un click"
 
 # Mensajes según nivel de alerta
 def obtener_nivel(dias):
