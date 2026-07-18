@@ -8,10 +8,15 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import asyncio
+import threading
+import schedule
+import time
+from remisiones import obtener_remisiones_pendientes, generar_excel
+from conciliacion import get_conciliacion_handler
 
 ALEGRA_TOKEN     = "0d9e3617130df4ec9b11"
 ALEGRA_EMAIL     = "autopartesaunclickcol@gmail.com"
-TELEGRAM_TOKEN   = "8619419567:AAHS07uaZSrCOhVGjECF3azU1U1XLnaFyV8"
+TELEGRAM_TOKEN   = "8619419567:AAGLsxGbKroZHEukxsMeSImDl4d2APfUYvU"
 CHAT_ID_PAPA     = 8492722057
 EMAIL_EMPRESA    = "autopartesaunclickcol@gmail.com"
 PASSWORD_APP     = "vijq vxzb naos ifld"  # Contraseña de aplicación Gmail
@@ -39,10 +44,9 @@ def obtener_facturas_alegra():
             "status": "open",
             "limit":  30,
             "start":  start,
-            "fields": "id,numberTemplate,dueDate,status,client,total"
         }
         try:
-            r = requests.get(url, auth=auth, params=params)
+            r = requests.get(url, auth=auth, params=params, timeout=30)
             r.raise_for_status()
             data = r.json()
         except Exception as e:
@@ -68,7 +72,7 @@ def obtener_facturas_alegra():
             resultado.append({
                 "numero":  f.get("numberTemplate", {}).get("fullNumber", "—"),
                 "cliente": f.get("client", {}).get("name", "—"),
-                "valor":   f"${float(f.get('total', 0)):,.0f}",
+                "valor":   f"${float(f.get('balance', 0)):,.0f}",
                 "dias":    dias,
                 "nivel":   nivel
             })
@@ -146,38 +150,80 @@ async def start(update, context: ContextTypes.DEFAULT_TYPE):
         "👋 Soy el bot de cartera de *Autopartes a un Clic*.\n\n"
         "Comandos:\n"
         "/reporte — consultar cartera ahora\n"
+        "/remisiones — ver remisiones pendientes\n"
+        "/conciliacion — conciliación bancaria vs Alegra\n"
         "/start — ver este mensaje",
         parse_mode="Markdown"
     )
+async def remisiones_cmd(update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🔄 Consultando remisiones pendientes...")
+    try:
+        datos = obtener_remisiones_pendientes()
+        if not datos:
+            await update.message.reply_text("✅ No hay remisiones pendientes.")
+            return
+        excel_bytes = generar_excel(datos)
+        total = sum(r["total"] for r in datos)
+        num   = len(datos)
+        await update.message.reply_text(
+            f"📋 *Remisiones Pendientes*\n"
+            f"📅 {datetime.now().strftime('%d/%m/%Y')}  |  Último mes\n\n"
+            f"🔢 Sin facturar: *{num}*\n"
+            f"💰 Total: *${total:,.0f}*".replace(",", "."),
+            parse_mode="Markdown"
+        )
+        await update.message.reply_document(
+            document=excel_bytes,
+            filename=f"Remisiones_{datetime.now().strftime('%Y_%m_%d')}.xlsx",
+            caption="📊 Detalle completo"
+        )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error: {e}")
 
 async def reporte_ahora(update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("⏳ Consultando Alegra, un momento...")
-    await asyncio.to_thread(revisar_cartera)
-
+    facturas, error = await asyncio.to_thread(obtener_facturas_alegra)
+    if error:
+        await update.message.reply_text(f"⚠️ Error:\n{error}")
+        return
+    if not facturas:
+        await update.message.reply_text("✅ No hay facturas vencidas.")
+        return
+    reporte = formatear_reporte(facturas)
+    print(f"Longitud reporte: {len(reporte)} caracteres")
+    if len(reporte) <= 4096:
+        await update.message.reply_text(reporte, parse_mode="Markdown")
+    else:
+        partes = [reporte[i:i+4000] for i in range(0, len(reporte), 4000)]
+        for parte in partes:
+            await update.message.reply_text(parte, parse_mode="Markdown")
 # ── Arrancar ─────────────────────────────────────────────────
-def main():
+def iniciar_scheduler():
+    # El lunes a la 1pm envía el reporte de cartera
+    schedule.every().monday.at("13:00").do(revisar_cartera)
+    # El jueves a la 1pm envía el recordatorio
+    schedule.every().thursday.at("13:00").do(recordatorio)
+    
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
-      # Arrancar scheduler en hilo aparte
+# 3. La función principal al final
+def main():
+    # Arrancar scheduler en hilo aparte (ahora Python ya sabe qué es esto)
     hilo = threading.Thread(target=iniciar_scheduler, daemon=True)
     hilo.start()
+
     app = Application.builder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reporte", reporte_ahora))
+    app.add_handler(CommandHandler("remisiones", remisiones_cmd))
+    app.add_handler(get_conciliacion_handler())
     print("🤖 Bot corriendo...")
     print("📅 Reporte automático: todos los lunes a la 1pm")
     print("⏰ Recordatorio: todos los jueves a la 1pm")
+    
     app.run_polling()
-
-import threading
-import schedule
-import time
-
-def iniciar_scheduler():
-    schedule.every().monday.at("13:00").do(revisar_cartera)
-    schedule.every().thursday.at("13:00").do(recordatorio)
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
 
 if __name__ == "__main__":
     main()
