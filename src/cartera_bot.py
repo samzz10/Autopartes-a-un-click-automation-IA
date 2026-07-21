@@ -20,7 +20,7 @@ load_dotenv()  # Cargar variables de entorno desde .env para mayor seguridad
 ALEGRA_TOKEN     = os.getenv("ALEGRA_TOKEN")
 ALEGRA_EMAIL     = os.getenv("ALEGRA_EMAIL")
 TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN")
-CHAT_ID_PAPA     = int(os.getenv("CHAT_ID_PAPA"))
+TELEGRAM_CHAT_ID = int(os.getenv("TELEGRAM_CHAT_ID"))
 NOMBRE_EMPRESA   = "Autopartes a un click"
 
 # Mensajes según nivel de alerta
