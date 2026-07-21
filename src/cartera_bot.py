@@ -118,7 +118,7 @@ def formatear_reporte(facturas):
 async def enviar_telegram(mensaje):
     bot = Bot(token=TELEGRAM_TOKEN)
     await bot.send_message(
-        chat_id=CHAT_ID_PAPA,
+        chat_id= TELEGRAM_CHAT_ID,
         text=mensaje,
         parse_mode="Markdown"
     )
